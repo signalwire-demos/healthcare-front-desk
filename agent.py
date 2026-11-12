@@ -123,9 +123,12 @@ class RiversideIntakeAgent(AgentBase):
                       "with that filter. When they accept a slot, call book_appointment.") \
             .set_step_criteria("An appointment is booked") \
             .set_functions(["check_availability", "book_appointment"]).set_valid_steps(["wrap_up"])
+        # wrap_up stays the active step after booking, so follow-up questions are still answered from code.
         ctx.add_step("wrap_up") \
-            .set_text("Tell them their appointment time in one sentence, ask if there's anything else, say goodbye.") \
-            .set_functions([]).set_end(True)
+            .set_text("Tell them their appointment time in one sentence and ask if there's anything else. "
+                      "Answer questions about the appointment you booked. Do not offer directions, forms, or "
+                      "anything else you have no tool for. When they have nothing else, say goodbye.") \
+            .set_functions([])
 
         self.set_post_prompt(
             'Return JSON only: {"reason":"","appointment":""}. Leave a field empty if it was not stated.'
