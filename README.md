@@ -5,7 +5,7 @@ text chat in the browser. Press **Call** at any point and the same agent picks u
 voice, without asking anything twice. Switch back to text and she still knows what happened on the call.
 Beside the chat, the page shows `agent.py` and highlights each step and tool as it runs.
 
-Try it live on [tryit.signalwire.com](https://tryit.signalwire.com/apps/riverside/).
+Try it live on [tryit.signalwire.com](https://tryit.signalwire.com/apps/healthcare/).
 
 ![Healthcare Front Desk](docs/screenshot.png)
 
