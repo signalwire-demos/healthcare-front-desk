@@ -55,7 +55,7 @@ def say(page, msg):
     box.press("Enter")
 
 def events(page):
-    return page.evaluate("async () => { const hs=[...handles]; let best=null; for (const h of hs) { const r=await fetch('/api/riverside/events?handle='+encodeURIComponent(h)); if(!r.ok) continue; const j=await r.json(); const t=j.events.length?j.events[j.events.length-1].t:0; if(!best||t>best.t) best={t,...j}; } return best; }")
+    return page.evaluate("async () => { const hs=[...handles]; let best=null; for (const h of hs) { const r=await fetch('/api/healthcare/events?handle='+encodeURIComponent(h)); if(!r.ok) continue; const j=await r.json(); const t=j.events.length?j.events[j.events.length-1].t:0; if(!best||t>best.t) best={t,...j}; } return best; }")
 
 with sync_playwright() as p:
     browser = p.chromium.launch(channel="chrome", headless=True, args=[

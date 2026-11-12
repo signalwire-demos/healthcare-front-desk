@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Chat with Ava</title>
+<title>Healthcare Front Desk</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@600&family=JetBrains+Mono:wght@400;600&family=Lexend:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root { --page:#0b0b14; --raised:#161827; --line:#26283c; --fg:#f0f0f4; --muted:#9a9aa8;
@@ -29,11 +29,9 @@
   .code { display:flex; flex-direction:column; min-width:0; height:100vh }
   .code header { padding:20px var(--gutter) 14px; border-bottom:1px solid var(--line) }
   .code h2 { font-family:'Instrument Sans', system-ui, sans-serif; font-size:20px; margin:0 0 4px }
+  .code h2 .repo { font-family:'Lexend', system-ui, sans-serif; font-size:13px; font-weight:500; color:var(--turq); margin-left:12px; white-space:nowrap }
   .code header p { margin:0; color:var(--muted); font-size:14px }
-  .code header p.try { margin-top:8px; color:var(--fg); line-height:2 } .try b { color:var(--gold); font-weight:500 }
-  .say { font:inherit; font-weight:500; color:var(--gold); background:var(--raised); border:1px solid var(--line);
-    border-radius:999px; padding:2px 12px; margin:0 2px; cursor:pointer }
-  .say:hover, .say:focus-visible { border-color:var(--gold); outline:none }
+  .code header p.try { margin-top:8px; color:var(--fg) } .try b { color:var(--gold); font-weight:500 }
   .now { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; min-height:30px }
   .chip { font-family:'JetBrains Mono', monospace; font-size:13px; padding:5px 10px; border-radius:8px; background:var(--raised);
     border:1px solid var(--line); color:var(--muted) }
@@ -73,14 +71,9 @@
 
   <section class="code">
     <header>
-      <h2>agent.py: the whole AI application</h2>
+      <h2>agent.py: the whole AI application <a class="repo" href="https://github.com/signalwire-demos/healthcare-front-desk" target="_blank" rel="noopener">View the code on GitHub</a></h2>
       <p>The highlighted lines are what Ava is running right now. The same code answers the chat and the call.</p>
-      <p class="try">Any name and date of birth work. Tap to send:
-        <button type="button" class="say" data-say="Nick Smith">Nick Smith</button>
-        <button type="button" class="say" data-say="March 4, 1988">March 4, 1988</button>
-        <button type="button" class="say" data-say="Yes">Yes</button>
-        <button type="button" class="say" data-say="Blood work">Blood work</button>.
-        Press <b>Call</b> any time to keep going by voice; taps still reach Ava on the call.</p>
+      <p class="try">Any name and date of birth work. Pick a suggested reply in the chat or type your own, and press <b>Call</b> any time to keep going by voice.</p>
       <div class="now" id="now"><span class="chip">Waiting for the first message</span></div>
     </header>
     <pre id="src"></pre>
@@ -111,7 +104,7 @@ function paint(line) {
 }
 
 async function loadCode() {
-  const c = await (await fetch('/api/riverside/code')).json();
+  const c = await (await fetch('/api/healthcare/code')).json();
   anchors = c.anchors;
   src.innerHTML = c.source.split('\n').map((l) => `<span class="ln">${paint(l) || ' '}</span>`).join('');
   lineEls = [...src.querySelectorAll('.ln')];
@@ -177,7 +170,7 @@ async function poll() {
   let best = null;
   for (const hd of handles) {
     try {
-      const r = await fetch('/api/riverside/events?handle=' + encodeURIComponent(hd));
+      const r = await fetch('/api/healthcare/events?handle=' + encodeURIComponent(hd));
       if (!r.ok) continue;
       const j = await r.json(), t = j.events.length ? j.events[j.events.length - 1].t : 0;
       if (!best || t > best.t) best = { t, ...j };
@@ -200,7 +193,7 @@ function watchCalls(widget) {
 
 (async () => {
   await loadCode();
-  const cfg = await (await fetch('/api/riverside/config')).json();
+  const cfg = await (await fetch('/api/healthcare/config')).json();
   const opts = {
     mode: 'both', defaultMode: 'chat', presentation: 'panel', position: 'top-left',
     gatewayUrl: cfg.gatewayUrl, chatKey: cfg.chatKey, chatStorageKey: STORAGE_KEY, widgetId: 'riverside',
@@ -215,7 +208,7 @@ function watchCalls(widget) {
   const toVoice = widget.switchToVoice.bind(widget);
   widget.switchToVoice = async () => {
     let r, j = {};
-    try { r = await fetch('/api/token/riverside'); j = await r.json().catch(() => ({})); } catch (e) { r = null; }
+    try { r = await fetch('/api/token/healthcare'); j = await r.json().catch(() => ({})); } catch (e) { r = null; }
     if (!r || !r.ok || !j.token || !j.address) {
       const d = j && j.detail, msg = (d && (d.error || d.message)) || (typeof d === 'string' ? d : '') ||
         'Voice calls are not available right now. You can keep chatting.';
@@ -252,15 +245,65 @@ function watchCalls(widget) {
     const d = widget.shadowRoot && widget.shadowRoot.querySelector('dialog.overlay');
     if (d && (widget._overlayState === 'entering' || widget._overlayState === 'open') && !d.open) d.show();
   };
-  // Tap-to-send: in chat it is a chat message; on a call it goes in as a typed turn (type-to-talk).
-  document.querySelectorAll('.say').forEach((btn) => btn.addEventListener('click', async () => {
-    const text = btn.dataset.say;
-    if (widget._overlayState === 'closed') await widget.open();
+  // Suggested replies live inside the chat window, above the message box, in chat and on a call.
+  // They follow Ava's latest question; a tap sends it, or the visitor types their own answer.
+  const SUGGEST = [
+    [/full name|your name/, ['Nick Smith', 'Maria Lopez']],
+    [/date of birth|birthday/, ['March 4, 1988', 'November 21, 1975']],
+    [/is that correct|is that right|did i get that/, ['Yes', 'No']],
+    [/covered|insurance|still active/, ['Yes, still covered', 'No, I changed plans']],
+    [/help you with|reason for|bring you in|what can i/, ['Blood work', 'Annual checkup']],
+    [/\d ?(am|pm)|morning or afternoon|which works|work for you|prefer/, ['That works', 'Mornings work better']],
+    [/anything else/, ["No, that's all", 'What time was that again?']],
+  ];
+  function suggestions() {
+    const history = (widget._chat && widget._chat.getHistory && widget._chat.getHistory()) || [];
+    const last = [...history].reverse().find((e) => e.speaker === 'ai');
+    const said = ((last && last.text) || '').toLowerCase();
+    const hit = SUGGEST.find(([re]) => re.test(said));
+    return hit ? hit[1] : [];
+  }
+  async function sendToAva(text) {
     if (widget._activeMedium === 'voice' && widget._typeToTalkAvailable()) return widget._sendTypedMessage(text);
-    // A chat message sent while Ava is still replying is dropped, so a quick second tap waits its turn.
+    // A chat message sent while Ava is still replying is dropped, so a quick tap waits its turn.
     for (let i = 0; i < 120 && (widget._chatBusy || widget._chatAwaitingReply); i++) await new Promise((r) => setTimeout(r, 250));
     widget._sendChatMessage(text);
-  }));
+  }
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync(`.sw-suggest { display:flex; flex-wrap:wrap; gap:8px; padding:8px 16px 0 }
+    .sw-suggest[hidden] { display:none }
+    .sw-suggest button { font:inherit; font-size:14px; color:#FFD700; background:transparent; border:1px solid #3a3c55;
+      border-radius:999px; padding:6px 14px; cursor:pointer }
+    .sw-suggest button:hover, .sw-suggest button:focus-visible { border-color:#FFD700; outline:none }`);
+  let shownKey = null;
+  function ensureSuggestions() {
+    const root = widget.shadowRoot;
+    const form = root && root.querySelector('form[part="composer"]');
+    if (!form) return;
+    if (!root.adoptedStyleSheets.includes(sheet)) root.adoptedStyleSheets = [...root.adoptedStyleSheets, sheet];
+    let bar = root.querySelector('.sw-suggest');
+    if (!bar || bar.nextElementSibling !== form) {   // the widget re-rendered: put the bar back above the box
+      if (bar) bar.remove();
+      bar = document.createElement('div');
+      bar.className = 'sw-suggest';
+      bar.setAttribute('aria-label', 'Suggested replies');
+      form.parentNode.insertBefore(bar, form);
+      shownKey = null;
+    }
+    const items = suggestions(), key = items.join('|');
+    if (key === shownKey) return;
+    shownKey = key;
+    bar.hidden = !items.length;
+    bar.replaceChildren(...items.map((text) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = text; b.dataset.say = text;
+      b.addEventListener('click', () => sendToAva(text));
+      return b;
+    }));
+  }
+  const updated = widget.updated.bind(widget);
+  widget.updated = (...a) => { updated(...a); ensureSuggestions(); };
+  setInterval(ensureSuggestions, 500);
   widget.open();
   poll();
 })();

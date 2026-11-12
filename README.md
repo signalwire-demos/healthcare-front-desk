@@ -19,7 +19,8 @@ Try it live on [tryit.signalwire.com](https://tryit.signalwire.com/apps/healthca
   `schedule`, `wrap_up`). The patient record, the booking and the summary come from code, so the model
   cannot double-book or invent a patient.
 - **Any name works.** For the demo, any name and date of birth gets a stable made-up record. The page
-  has tap-to-send buttons for the details, which also reach Ava during a call (type-to-talk).
+  shows suggested replies above the message box that follow Ava's latest question. Tap one or type
+  your own; on a call, taps reach Ava as typed turns (type-to-talk).
 
 All patient data is fictional.
 
@@ -74,6 +75,7 @@ in the page. Re-check them if you upgrade the widget:
 - After switching back to text, a late call "disconnected" event closed the panel.
 - The panel opened as a modal dialog, which blocked the rest of the page.
 - A chat message sent while Ava was still replying was dropped.
+- There is no suggested-replies feature, so the page inserts a bar above the message box.
 
 ## Test
 

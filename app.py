@@ -3,11 +3,11 @@ Hosts Ava (agent.py) for the chat page. Nothing in here is about Ava herself.
 
   /                        the page: SignalWire address widget + live code panel
   /riverside               Ava's SWML, fetched by the AI Chat service and by calls (basic auth)
-  /api/riverside/chat/...  ChatGateway (text turns) and HandoffRouter (chat <-> call), from signalwire-sdk
-  /api/riverside/config    gateway URL and publishable chat key for the page
-  /api/token/riverside     a guest token for the browser call, minted when Call is pressed
-  /api/riverside/code      agent.py with the line ranges the code panel lights up
-  /api/riverside/events    what ran in this conversation
+  /api/healthcare/chat/...  ChatGateway (text turns) and HandoffRouter (chat <-> call), from signalwire-sdk
+  /api/healthcare/config    gateway URL and publishable chat key for the page
+  /api/token/healthcare     a guest token for the browser call, minted when Call is pressed
+  /api/healthcare/code      agent.py with the line ranges the code panel lights up
+  /api/healthcare/events    what ran in this conversation
 
 Run:  python app.py   (one process: conversations, handoffs and rate limits live in memory)
 """
@@ -255,19 +255,19 @@ def create_server():
     @server.app.middleware("http")
     async def chat_root(request: Request, call_next):
         # The widget posts to the gateway URL itself; the SDK router answers on ".../chat/".
-        if request.url.path == "/api/riverside/chat":
-            request.scope["path"] = "/api/riverside/chat/"
+        if request.url.path == "/api/healthcare/chat":
+            request.scope["path"] = "/api/healthcare/chat/"
         return await call_next(request)
 
-    server.app.include_router(gateway.router(), prefix="/api/riverside/chat")
-    server.app.include_router(handoff.router(), prefix="/api/riverside/chat")
+    server.app.include_router(gateway.router(), prefix="/api/healthcare/chat")
+    server.app.include_router(handoff.router(), prefix="/api/healthcare/chat")
     server.register(agent, "/riverside")
 
-    @server.app.get("/api/riverside/config")
+    @server.app.get("/api/healthcare/config")
     def config():
-        return {"gatewayUrl": "/api/riverside/chat", "chatKey": CHAT_KEY}
+        return {"gatewayUrl": "/api/healthcare/chat", "chatKey": CHAT_KEY}
 
-    @server.app.get("/api/token/riverside")
+    @server.app.get("/api/token/healthcare")
     def call_token(request: Request):
         ip = (request.headers.get("cf-connecting-ip") or request.headers.get("x-forwarded-for", "").split(",")[0]
               or (request.client.host if request.client else "")).strip()
@@ -285,11 +285,11 @@ def create_server():
         TOKEN_MINTS[ip].append(now)
         return {"token": r.json()["token"], "address": handler_info["address"]}
 
-    @server.app.get("/api/riverside/code")
+    @server.app.get("/api/healthcare/code")
     def code():
         return code_map()
 
-    @server.app.get("/api/riverside/events")
+    @server.app.get("/api/healthcare/events")
     def events(handle: str = ""):
         try:
             session = root_of(gateway.read_handle(handle))
