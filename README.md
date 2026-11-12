@@ -1,4 +1,4 @@
-# Riverside front desk
+# Healthcare Front Desk
 
 A chat-first AI assistant built on SignalWire. Ava, the front desk for a fictional clinic, answers a
 text chat in the browser. Press **Call** at any point and the same agent picks up the conversation by
@@ -7,7 +7,7 @@ Beside the chat, the page shows `agent.py` and highlights each step and tool as 
 
 Try it live on [tryit.signalwire.com](https://tryit.signalwire.com/apps/riverside/).
 
-![Riverside front desk](docs/screenshot.png)
+![Healthcare Front Desk](docs/screenshot.png)
 
 ## What it shows
 
@@ -47,7 +47,7 @@ All patient data is fictional.
    ```
 
 4. Open `SWML_PROXY_URL_BASE` in Chrome. On startup the app creates (or updates) a Call Fabric SWML
-   handler named `riverside-front-desk` that points at `/riverside`, and the page dials its address.
+   handler named `healthcare-front-desk` that points at `/riverside`, and the page dials its address.
 
 Run exactly one process: conversations, handoffs and rate limits live in memory.
 

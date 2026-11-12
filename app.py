@@ -47,7 +47,7 @@ SW_HOST = SPACE if "." in SPACE else f"{SPACE}.signalwire.com"
 PROJECT, TOKEN = os.environ["SIGNALWIRE_PROJECT_ID"], os.environ["SIGNALWIRE_TOKEN"]
 PUBLIC_URL = os.environ["SWML_PROXY_URL_BASE"].rstrip("/")
 FABRIC = f"https://{SW_HOST}/api/fabric"
-HANDLER_NAME = os.getenv("FABRIC_HANDLER_NAME", "riverside-front-desk")
+HANDLER_NAME = os.getenv("FABRIC_HANDLER_NAME", "healthcare-front-desk")
 CALLS_PER_IP_PER_HOUR = int(os.getenv("CALLS_PER_IP_PER_HOUR", "20"))
 handler_info = {}
 
