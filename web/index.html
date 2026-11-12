@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chat with Ava</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@600&family=JetBrains+Mono:wght@400;600&family=Lexend:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root { --page:#0b0b14; --raised:#161827; --line:#26283c; --fg:#f0f0f4; --muted:#9a9aa8;
+    --blue:#044EF4; --fuchsia:#F72A72; --turq:#40E0D0; --gold:#FFD700; --gutter:24px }
+  * { box-sizing:border-box }
+  html, body { height:100% }
+  body { margin:0; background:var(--page); color:var(--fg); font-family:'Lexend', system-ui, sans-serif }
+  .wrap { display:grid; grid-template-columns:minmax(360px, 44%) 1fr; height:100vh }
+
+  /* Left: the chat. The widget's corner panel is sized to fill this column. */
+  .chat { position:relative; padding:var(--gutter); border-right:1px solid var(--line) }
+  .chat .reopen { position:absolute; inset:var(--gutter); display:grid; place-content:center; gap:14px; text-align:center;
+    border:1px dashed var(--line); border-radius:16px }
+  .chat h1 { font-family:'Instrument Sans', system-ui, sans-serif; font-size:26px; margin:0 }
+  .chat p { color:var(--muted); margin:0; max-width:340px; line-height:1.5 }
+  signalwire-address { --sw-address-panel-width:calc(44vw - 2 * var(--gutter)); --sw-address-panel-height:calc(100vh - 2 * var(--gutter)) }
+  /* The panel is a modal dialog; keep the code beside it at full brightness. */
+  signalwire-address::part(overlay)::backdrop { background:transparent; backdrop-filter:none }
+  signalwire-address::part(launcher), .btn { font:inherit; font-weight:500; font-size:16px; border:0; border-radius:999px;
+    padding:12px 28px; cursor:pointer; color:#fff; background:var(--fuchsia) }
+
+  /* Right: the code that is running. */
+  .code { display:flex; flex-direction:column; min-width:0; height:100vh }
+  .code header { padding:20px var(--gutter) 14px; border-bottom:1px solid var(--line) }
+  .code h2 { font-family:'Instrument Sans', system-ui, sans-serif; font-size:20px; margin:0 0 4px }
+  .code header p { margin:0; color:var(--muted); font-size:14px }
+  .code header p.try { margin-top:8px; color:var(--fg); line-height:2 } .try b { color:var(--gold); font-weight:500 }
+  .say { font:inherit; font-weight:500; color:var(--gold); background:var(--raised); border:1px solid var(--line);
+    border-radius:999px; padding:2px 12px; margin:0 2px; cursor:pointer }
+  .say:hover, .say:focus-visible { border-color:var(--gold); outline:none }
+  .now { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; min-height:30px }
+  .chip { font-family:'JetBrains Mono', monospace; font-size:13px; padding:5px 10px; border-radius:8px; background:var(--raised);
+    border:1px solid var(--line); color:var(--muted) }
+  .chip b { color:var(--fg); font-weight:600 }
+  .chip.step b { color:var(--turq) } .chip.tool b { color:var(--fuchsia) } .chip.leg b { color:var(--gold) }
+  pre { flex:1; overflow:auto; margin:0; padding:12px 0 40vh; font-family:'JetBrains Mono', monospace; font-size:13.5px; line-height:1.6;
+    color:#c9c9d3; counter-reset:ln }
+  .ln { display:block; padding:0 var(--gutter) 0 0; border-left:3px solid transparent; transition:background .4s ease, opacity .4s ease;
+    white-space:pre }
+  .ln::before { counter-increment:ln; content:counter(ln); display:inline-block; width:48px; padding-right:16px; text-align:right;
+    color:#4a4c63 }
+  pre.focus .ln { opacity:.45 }
+  pre.focus .ln.hl { opacity:1; background:rgba(247,42,114,.10); border-left-color:var(--fuchsia); color:#fff }
+  pre.focus .ln.hl.step { background:rgba(64,224,208,.08); border-left-color:var(--turq) }
+  .k { color:#c792ea } .s { color:#a5e1a0 } .c { color:#6b6d85; font-style:italic } .d { color:var(--gold) }
+  .result { font-family:'JetBrains Mono', monospace; font-size:13px; color:var(--muted); padding:10px var(--gutter);
+    border-top:1px solid var(--line); min-height:40px; white-space:pre-wrap; word-break:break-word }
+
+  @media (max-width: 820px) {
+    signalwire-address { --sw-address-panel-width:calc(100vw - 2 * var(--gutter)); --sw-address-panel-height:calc(70vh - 2 * var(--gutter)) }
+    .wrap { grid-template-columns:1fr; height:auto }
+    .chat { height:70vh; border-right:0; border-bottom:1px solid var(--line); padding:16px }
+    .code { height:auto } pre { padding-bottom:24px; font-size:12px }
+    :root { --gutter:16px }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="chat">
+    <div class="reopen">
+      <h1>Riverside Family Health</h1>
+      <p>Chat with Ava, the front desk assistant. Switch to a voice call any time and she carries on where you left off.</p>
+      <div id="launcher"></div>
+    </div>
+  </section>
+
+  <section class="code">
+    <header>
+      <h2>agent.py: the whole AI application</h2>
+      <p>The highlighted lines are what Ava is running right now. The same code answers the chat and the call.</p>
+      <p class="try">Any name and date of birth work. Tap to send:
+        <button type="button" class="say" data-say="Nick Smith">Nick Smith</button>
+        <button type="button" class="say" data-say="March 4, 1988">March 4, 1988</button>
+        <button type="button" class="say" data-say="Yes">Yes</button>
+        <button type="button" class="say" data-say="Blood work">Blood work</button>.
+        Press <b>Call</b> any time to keep going by voice; taps still reach Ava on the call.</p>
+      <div class="now" id="now"><span class="chip">Waiting for the first message</span></div>
+    </header>
+    <pre id="src"></pre>
+    <div class="result" id="result"></div>
+  </section>
+</div>
+
+<script src="/address-widget.umd.js"></script>
+<script>
+const STORAGE_KEY = 'riverside-chat-handle';
+const TOOL_STEP = { lookup_patient: 'verify', check_availability: 'schedule', book_appointment: 'schedule' };
+const src = document.getElementById('src'), now = document.getElementById('now'), resultEl = document.getElementById('result');
+let anchors = {}, lineEls = [], seen = 0, handle = null, lastKey = '';
+
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+// Light syntax colouring in one pass over the raw text, so no rule can match markup another rule added.
+const TOKEN = /(#.*$)|("(?:[^"\\]|\\.)*"?|'(?:[^'\\]|\\.)*'?)|(@[\w.]+)|\b(def|class|return|if|else|elif|for|in|import|from|not|and|or|None|True|False|self|with|while)\b/g;
+const CLS = [null, 'c', 's', 'd', 'k'];
+function paint(line) {
+  let out = '', last = 0;
+  line.replace(TOKEN, (m, ...g) => {
+    const at = g[4], kind = [1, 2, 3, 4].find((i) => g[i - 1] !== undefined);
+    out += esc(line.slice(last, at)) + `<span class="${CLS[kind]}">${esc(m)}</span>`;
+    last = at + m.length;
+    return m;
+  });
+  return out + esc(line.slice(last));
+}
+
+async function loadCode() {
+  const c = await (await fetch('/api/riverside/code')).json();
+  anchors = c.anchors;
+  src.innerHTML = c.source.split('\n').map((l) => `<span class="ln">${paint(l) || ' '}</span>`).join('');
+  lineEls = [...src.querySelectorAll('.ln')];
+}
+
+function highlight(ranges, isStep) {
+  lineEls.forEach((el) => el.classList.remove('hl', 'step'));
+  let first = null;
+  for (const [a, b] of ranges) for (let i = a; i <= b; i++) {
+    const el = lineEls[i - 1]; if (!el) continue;
+    el.classList.add('hl'); if (isStep) el.classList.add('step'); first = first || el;
+  }
+  src.classList.toggle('focus', !!first);
+  if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function chips(items) {
+  now.innerHTML = items.map(([cls, label, val]) => `<span class="chip ${cls}">${label} <b>${esc(String(val))}</b></span>`).join('');
+}
+
+function show(events, legs) {
+  const last = events[events.length - 1];
+  const leg = legs.length ? (legs[legs.length - 1] === 'chat' ? 'voice call' : 'text chat') : 'text chat';
+  let step = 'intake';
+  for (const e of events) step = e.kind === 'step' ? e.name : (TOOL_STEP[e.name] || step);
+  const key = (last ? last.t : 0) + step + leg;
+  if (key === lastKey) return; lastKey = key;
+
+  const items = [['leg', 'on', leg], ['step', 'step', step]];
+  if (last && last.kind === 'tool') {
+    items.push(['tool', 'tool', last.name + '()']);
+    highlight([anchors[last.name], anchors['step:' + step]].filter(Boolean), false);
+    resultEl.textContent = `${last.name}(${JSON.stringify(last.args || {})})\n→ ${JSON.stringify(last.result)}`;
+  } else if (last && last.kind === 'post') {
+    items.push(['tool', 'ended', 'post_prompt']);
+    highlight([anchors.post_prompt].filter(Boolean), false);
+    resultEl.textContent = 'Summary: ' + JSON.stringify(last.summary);
+  } else {
+    highlight([anchors['step:' + step]].filter(Boolean), true);
+  }
+  chips(items);
+}
+
+function findHandle() {
+  try {
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const k = sessionStorage.key(i);
+      if (k.includes(STORAGE_KEY)) {
+        const v = sessionStorage.getItem(k); let h = v;
+        try { const j = JSON.parse(v); h = j.handle || j.value || v; } catch (e) {}
+        if (h && h.length > 20) return h;
+      }
+    }
+  } catch (e) {}
+  return null;
+}
+
+// The widget opens a fresh, empty chat when it switches to voice, so the stored handle changes.
+// Remember every handle seen and show whichever conversation has the newest activity.
+const handles = new Set();
+async function poll() {
+  const h = findHandle(); if (h) handles.add(h);
+  let best = null;
+  for (const hd of handles) {
+    try {
+      const r = await fetch('/api/riverside/events?handle=' + encodeURIComponent(hd));
+      if (!r.ok) continue;
+      const j = await r.json(), t = j.events.length ? j.events[j.events.length - 1].t : 0;
+      if (!best || t > best.t) best = { t, ...j };
+    } catch (e) {}
+  }
+  if (best) show(best.events, best.legs);
+  setTimeout(poll, 1000);
+}
+
+// No ghost calls: the agent stops at 300 s; the page hangs up at 5 minutes too.
+const MAX_CALL_MS = 5 * 60 * 1000;
+let callTimer = null;
+function watchCalls(widget) {
+  widget.addEventListener('signalwire-address:call-joined', () => {
+    clearTimeout(callTimer);
+    callTimer = setTimeout(() => widget.hangup(), MAX_CALL_MS);
+  });
+  widget.addEventListener('signalwire-address:call-left', () => clearTimeout(callTimer));
+}
+
+(async () => {
+  await loadCode();
+  const cfg = await (await fetch('/api/riverside/config')).json();
+  const opts = {
+    mode: 'both', defaultMode: 'chat', presentation: 'panel', position: 'top-left',
+    gatewayUrl: cfg.gatewayUrl, chatKey: cfg.chatKey, chatStorageKey: STORAGE_KEY, widgetId: 'riverside',
+    label: 'Chat with Ava', video: false, theme: 'dark', typeToTalk: true,
+    chatPlaceholder: 'Type a message to Ava...',
+    debug: new URLSearchParams(location.search).has('debug'),
+  };
+  // The widget shows Call only when token and destination are both truthy, so mount with placeholders.
+  // The real guest token is minted when Call is pressed (see switchToVoice below).
+  Object.assign(opts, { token: 'pending', destination: 'pending' });
+  const widget = SignalWireAddressWidget.mount('#launcher', opts);
+  const toVoice = widget.switchToVoice.bind(widget);
+  widget.switchToVoice = async () => {
+    let r, j = {};
+    try { r = await fetch('/api/token/riverside'); j = await r.json().catch(() => ({})); } catch (e) { r = null; }
+    if (!r || !r.ok || !j.token || !j.address) {
+      const d = j && j.detail, msg = (d && (d.error || d.message)) || (typeof d === 'string' ? d : '') ||
+        'Voice calls are not available right now. You can keep chatting.';
+      widget._showBanner({ level: 'warning', text: msg, dismissible: true });
+      return;
+    }
+    widget.token = j.token; widget.destination = j.address;
+    return toVoice();
+  };
+  // Widget 0.4.1 bug: with defaultMode 'chat', pressing Call reopens in chat (minting an empty
+  // conversation) instead of dialing. While a chat-to-voice handoff is pending, voice leads.
+  const lead = widget._leadMedium.bind(widget);
+  widget._leadMedium = () => (widget._pendingChatHandoff ? 'voice' : lead());
+  // The consent dialog pre-checks "use my audio to train AI features". Start it unchecked.
+  const openConsent = widget._openConsentModal.bind(widget);
+  widget._openConsentModal = () => {
+    openConsent();
+    if (!widget._consent) widget._consentDraft = { ...widget._consentDraft, train: false };
+  };
+  // After switching back to text, the server ends the call. If the call reports "disconnected"
+  // after the switch finishes, the widget treats it as a hang-up and closes the chat. Ignore that close.
+  let backToChatAt = 0;
+  const toChat = widget.switchToChat.bind(widget);
+  widget.switchToChat = async () => {
+    backToChatAt = Date.now(); await toChat(); backToChatAt = Date.now();
+    clearTimeout(callTimer);   // the widget sends no call-left event on this path
+  };
+  const close = widget.close.bind(widget);
+  widget.close = () => (widget._activeMedium === 'chat' && Date.now() - backToChatAt < 8000 ? Promise.resolve() : close());
+  watchCalls(widget);
+  // The widget opens its panel as a modal dialog, which makes the rest of the page inert: the
+  // tap-to-send buttons and the code panel could not be clicked or scrolled. Open it non-modal.
+  widget._syncDialogOpen = () => {
+    const d = widget.shadowRoot && widget.shadowRoot.querySelector('dialog.overlay');
+    if (d && (widget._overlayState === 'entering' || widget._overlayState === 'open') && !d.open) d.show();
+  };
+  // Tap-to-send: in chat it is a chat message; on a call it goes in as a typed turn (type-to-talk).
+  document.querySelectorAll('.say').forEach((btn) => btn.addEventListener('click', async () => {
+    const text = btn.dataset.say;
+    if (widget._overlayState === 'closed') await widget.open();
+    if (widget._activeMedium === 'voice' && widget._typeToTalkAvailable()) return widget._sendTypedMessage(text);
+    // A chat message sent while Ava is still replying is dropped, so a quick second tap waits its turn.
+    for (let i = 0; i < 120 && (widget._chatBusy || widget._chatAwaitingReply); i++) await new Promise((r) => setTimeout(r, 250));
+    widget._sendChatMessage(text);
+  }));
+  widget.open();
+  poll();
+})();
+</script>
+</body>
+</html>

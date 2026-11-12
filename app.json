@@ -1,0 +1,13 @@
+{
+  "name": "riverside-front-desk",
+  "description": "Riverside front desk: a chat-first AI assistant that switches to a browser voice call mid-conversation, with the agent's code highlighted live as it runs",
+  "keywords": ["signalwire", "ai", "agent", "ai-chat", "webrtc", "python"],
+  "env": {
+    "SIGNALWIRE_SPACE_NAME": {"description": "SignalWire space name (e.g., 'myspace' or 'myspace.signalwire.com')", "required": true},
+    "SIGNALWIRE_PROJECT_ID": {"description": "SignalWire project ID", "required": true},
+    "SIGNALWIRE_TOKEN": {"description": "SignalWire API token with the AI Chat scope", "required": true},
+    "SWML_PROXY_URL_BASE": {"description": "Public URL of this app (e.g., 'https://riverside.example.com')", "required": true},
+    "SWML_BASIC_AUTH_USER": {"description": "Basic auth username for SWML endpoints (optional, auto-generated if not set)", "required": false},
+    "SWML_BASIC_AUTH_PASSWORD": {"description": "Basic auth password for SWML endpoints (optional, auto-generated if not set)", "required": false}
+  }
+}
